@@ -15,16 +15,6 @@ Options:
     --config        Show config and exit.
 """
 
-cookie_help = """Get a valid jenkins session cookie by using dev tools:
-
-> document.cookie
-
-And then setting your JENKINS_COOKIE environment variable, eg:
-
-$ export JENKINS_COOKIE="JSESSIONID.667a88d9=1dn2t...;"
-$ export JENKINS_URL="https://foo.bar.com"
-"""
-
 import sys
 import os
 import cookielib
@@ -33,22 +23,26 @@ import docopt
 import time
 from pprint import pformat
 
-COOKIE={}
-URL="https://jenkins/"
+url_help = """Please set JENKINS_URL to the url to your jenkins instance.
+
+If your jenkins is behind a login, you can first go to:
+    https://jenkins/user/<yourname>/configure
+
+And get a token by clicking "Show API Token", and then use a URL like:
+    https://<yourname>:<yourtoken>@jenkins/
+"""
+
+URL=""
 
 def main():
+    global URL
     args = docopt.docopt(__doc__, version="1.0")
-    global URL, COOKIE
-    try:
-        COOKIE = dict(cookielib.parse_ns_headers([os.getenv("JENKINS_COOKIE")])[0])
-    finally:
-        if not COOKIE:
-            print cookie_help
-            return
     if os.getenv("JENKINS_URL"):
         URL = os.getenv("JENKINS_URL")
+    if not URL:
+        print url_help
+        return
     if args['--config']:
-        print "COOKIE: %s" % (pformat(COOKIE))
         print "URL: %s" % (URL)
         return
     if args['list']:
@@ -67,7 +61,7 @@ def print_response_err(resp):
 
 def cmd_list(args):
     url = "%s/api/json" % URL
-    resp = requests.get(url, cookies=COOKIE)
+    resp = requests.get(url)
     if not resp.ok:
         print_response_err(resp)
         return
@@ -81,7 +75,7 @@ def cmd_list(args):
 
 def cmd_show(args):
     url = "%s/view/%s/api/json" % (URL, args['<view>'])
-    resp = requests.get(url, cookies=COOKIE)
+    resp = requests.get(url)
     if not resp.ok:
         print_response_err(resp)
         return
@@ -94,7 +88,7 @@ def cmd_build(args):
     # this also lets us bail out if the job is invalid
     job = args['<job>']
     url = "%s/job/%s/api/json" % (URL, job)
-    resp = requests.get(url, cookies=COOKIE)
+    resp = requests.get(url)
     if not resp.ok:
         print_response_err(resp)
         return
@@ -103,16 +97,24 @@ def cmd_build(args):
 
     # now lets start the build job
     url = "%s/job/%s/build?delay=0sec" % (URL, job)
-    resp = requests.post(url, cookies=COOKIE)
+    resp = requests.post(url)
     if not resp.ok:
         print "Error starting build:"
         print_response_err(resp)
         return
 
+    def console():
+        resp = requests.get("%s/job/%s/%s/consoleText" % (URL, job, build))
+        if not resp.ok:
+            return []
+        lines = resp.text.split("\n")
+        return lines
+
     first = True
     url = "%s/job/%s/%s/api/json" % (URL, job, build)
+    cp = 0
     while 1:
-        resp = requests.get(url, cookies=COOKIE)
+        resp = requests.get(url)
         if not resp.ok:
             print_response_err(resp)
             return
@@ -123,6 +125,10 @@ def cmd_build(args):
         if not doc['building']:
             print doc['result']
             return
+        cons = console()
+        if len(cons) > cp:
+            print "\n".join(cons[cp:]),
+            cp = len(cons)
         time.sleep(2)
 
 if __name__ == '__main__':
