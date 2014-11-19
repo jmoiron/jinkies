@@ -17,6 +17,7 @@ Options:
 
 import sys
 import os
+import re
 import cookielib
 import requests
 import docopt
@@ -33,6 +34,41 @@ And get a token by clicking "Show API Token", and then use a URL like:
 """
 
 URL=""
+
+white,black,red,green,yellow,blue,purple = range(89,96)
+def color(string, color=green, bold=False, underline=False):
+    """Usage: color("foo", red, bold=True)"""
+    s = '01;' if bold else '04;' if underline else ''
+    return '\033[%s%sm' % (s, color) + str(string) + '\033[0m'
+
+# boo
+spre = re.compile(r'<span style="color: #(?P<color>[0-9A-F]{6});">(?P<txt>.*?)</span>')
+are = re.compile(r'<a href=.*?>(?P<txt>.*?)</a>')
+spnre = re.compile(r'<span.*?>(?P<txt>.*?)</span>')
+bre = re.compile(r'<b>(?P<txt>.*?)</b>')
+
+colmap = {
+    'CDCD00': lambda s: color(s, color=yellow, bold=True),
+    '00CD00': lambda s: color(s, color=green, bold=True),
+    'link': lambda s: color(s, color=red, underline=True),
+    'bold': lambda s: color(s, color=white, bold=True),
+    '': lambda s: s,
+}
+
+def colorize(text):
+    def rep(default):
+        def inner(group):
+            d = group.groupdict()
+            color = d.get('color', default)
+            txt = d.get('txt', '')
+            return colmap[color](txt)
+        return inner
+    s = text
+    s, _ = spre.subn(rep(''), s)
+    s, _ = spnre.subn(rep(''), s)
+    s, _ = are.subn(rep('link'), s)
+    s, _ = bre.subn(rep('bold'), s)
+    return s
 
 def main():
     global URL
@@ -104,10 +140,11 @@ def cmd_build(args):
         return
 
     def console():
-        resp = requests.get("%s/job/%s/%s/consoleText" % (URL, job, build))
+        resp = requests.get("%s/job/%s/%s/logText/progressiveHtml" % (URL, job, build))
         if not resp.ok:
             return []
-        lines = resp.text.split("\n")
+        text = colorize(resp.text)
+        lines = text.split("\n")
         return lines
 
     first = True
@@ -136,3 +173,4 @@ if __name__ == '__main__':
         main()
     except KeyboardInterrupt:
         pass
+
