@@ -159,14 +159,14 @@ def cmd_build(args):
         if first:
             print "Started build #%d, ETA %.1fs" % (build, doc['estimatedDuration']/1000.0)
             first = False
-        if not doc['building']:
-            print doc['result']
-            return
         cons = console()
         if len(cons) > cp:
             print "\n".join(cons[cp:]),
             cp = len(cons)
-        time.sleep(2)
+        if not doc['building']:
+            print doc['result']
+            return
+        time.sleep(1.5)
 
 if __name__ == '__main__':
     try:
