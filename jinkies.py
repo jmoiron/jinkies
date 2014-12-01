@@ -162,7 +162,7 @@ def cmd_build(args):
         cons = console()
         if len(cons) > cp:
             print "\n".join(cons[cp:]),
-            cp = len(cons)
+            cp = len(cons)-1
         if not doc['building']:
             print doc['result']
             return
@@ -173,4 +173,3 @@ if __name__ == '__main__':
         main()
     except KeyboardInterrupt:
         pass
-
