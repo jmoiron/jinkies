@@ -148,13 +148,37 @@ def cmd_build(args):
         return lines
 
     first = True
+    firstWait = True
     url = "%s/job/%s/%s/api/json" % (URL, job, build)
     cp = 0
+    failures = 0
+    waits = 0
     while 1:
         resp = requests.get(url)
-        if not resp.ok:
-            print_response_err(resp)
-            return
+        if not resp.ok and first:
+            r2 = requests.get("%s/job/%s/api/json" % (URL, job))
+            waits += 1
+            if not r2.ok:
+                print "Failure loading job for %s" % (job)
+                print r2.data
+                return
+            d = r2.json()
+            if d['inQueue']:
+                if firstWait:
+                    sys.stdout.write('Waiting in job queue .')
+                    firstWait = False
+                else:
+                    sys.stdout.write('.')
+                sys.stdout.flush()
+                time.sleep(2.5)
+            elif not resp.ok:
+                failures += 1
+                if failures > 5:
+                    print "Failure loading job for %s" % (job)
+                    return
+            continue
+        if first and (failures or waits):
+            print ""
         doc = resp.json()
         if first:
             print "Started build #%d, ETA %.1fs" % (build, doc['estimatedDuration']/1000.0)
