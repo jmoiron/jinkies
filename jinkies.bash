@@ -24,14 +24,14 @@ _jinkies_complete() {
     local prev=${COMP_WORDS[COMP_CWORD-1]}
     case "$prev" in
         jinkies)
-            COMPREPLY=($(compgen -W "list show build" -- $cur))
+            COMPREPLY=($(compgen -W "list show view build" -- $cur))
             return 0
             ;;
         show)
             COMPREPLY=($(compgen -W "${_jinkies_complete_views}" -- $cur))
             return 0
             ;;
-        build)
+        build|view)
             COMPREPLY=($(compgen -W "${_jinkies_complete_jobs}" -- $cur))
             return 0
             ;;

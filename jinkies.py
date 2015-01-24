@@ -7,6 +7,7 @@ Usage:
     jinkies list (jobs|views)
     jinkies show <view>
     jinkies build <job>
+    jinkies view <job>
     jinkies --config
 
 Options:
@@ -87,6 +88,8 @@ def main():
         return cmd_show(args)
     elif args['build']:
         return cmd_build(args)
+    elif args['view']:
+        return cmd_view(args)
 
 def print_job(job):
     print job['name']
@@ -119,6 +122,27 @@ def cmd_show(args):
     for job in doc['jobs']:
         print_job(job)
 
+def cmd_view(args):
+    job = args['<job>']
+    url = "%s/job/%s/api/json" % (URL, job)
+    resp = requests.get(url)
+    if not resp.ok:
+        print_response_err(resp)
+        return
+    doc = resp.json()
+    previous = doc['lastCompletedBuild']
+    print "Showing previous build %d" % previous['number']
+    print '\n'.join(get_console(job, previous['number']))
+
+
+def get_console(job, build):
+    resp = requests.get("%s/job/%s/%s/logText/progressiveHtml" % (URL, job, build))
+    if not resp.ok:
+        return []
+    text = colorize(resp.text)
+    lines = text.split("\n")
+    return lines
+
 def cmd_build(args):
     # first, fetch the job to figure out what the next build number is
     # this also lets us bail out if the job is invalid
@@ -139,13 +163,7 @@ def cmd_build(args):
         print_response_err(resp)
         return
 
-    def console():
-        resp = requests.get("%s/job/%s/%s/logText/progressiveHtml" % (URL, job, build))
-        if not resp.ok:
-            return []
-        text = colorize(resp.text)
-        lines = text.split("\n")
-        return lines
+    console = lambda: get_console(job, build)
 
     first = True
     firstWait = True
