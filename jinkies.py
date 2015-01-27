@@ -51,6 +51,7 @@ bre = re.compile(r'<b>(?P<txt>.*?)</b>')
 colmap = {
     'CDCD00': lambda s: color(s, color=yellow, bold=True),
     '00CD00': lambda s: color(s, color=green, bold=True),
+    '00CDCD': lambda s: color(s, color=blue, bold=True),
     'link': lambda s: color(s, color=red, underline=True),
     'bold': lambda s: color(s, color=white, bold=True),
     '': lambda s: s,
@@ -130,39 +131,29 @@ def cmd_view(args):
         print_response_err(resp)
         return
     doc = resp.json()
-    previous = doc['lastCompletedBuild']
-    print "Showing previous build %d" % previous['number']
-    print '\n'.join(get_console(job, previous['number']))
-
-
-def get_console(job, build):
-    resp = requests.get("%s/job/%s/%s/logText/progressiveHtml" % (URL, job, build))
-    if not resp.ok:
-        return []
-    text = colorize(resp.text)
-    lines = text.split("\n")
-    return lines
-
-def cmd_build(args):
-    # first, fetch the job to figure out what the next build number is
-    # this also lets us bail out if the job is invalid
-    job = args['<job>']
-    url = "%s/job/%s/api/json" % (URL, job)
-    resp = requests.get(url)
-    if not resp.ok:
-        print_response_err(resp)
-        return
-    doc = resp.json()
-    build = doc['nextBuildNumber']
-
-    # now lets start the build job
-    url = "%s/job/%s/build?delay=0sec" % (URL, job)
-    resp = requests.post(url)
-    if not resp.ok:
-        print "Error starting build:"
-        print_response_err(resp)
+    # if there is a queued job, lets wait for it to start
+    if doc['inQueue']:
+        next = doc['nextBuildNumber']
+        watch(URL, job, next)
         return
 
+    previous = doc['lastBuild']
+    previousFinished = doc['lastCompletedBuild']
+
+    if previous['number'] == previousFinished['number']:
+        print "Showing previous build %d" % previous['number']
+        print '\n'.join(get_console(job, previous['number']))
+        print ""
+        print "Showed previous build:"
+        print "%s/job/%s/%s" % (URL, job, previous['number'])
+        return
+
+    watch(URL, job, previous['number'])
+
+
+def watch(URL, job, build):
+    """Watch console output for a job.  In the event that it hasn't begun yet
+    (eg. it is queued), wait for it to start and then watch the output."""
     console = lambda: get_console(job, build)
 
     first = True
@@ -209,6 +200,37 @@ def cmd_build(args):
             print doc['result']
             return
         time.sleep(1.5)
+
+def get_console(job, build):
+    resp = requests.get("%s/job/%s/%s/logText/progressiveHtml" % (URL, job, build))
+    if not resp.ok:
+        return []
+    text = colorize(resp.text)
+    lines = text.split("\n")
+    return lines
+
+def cmd_build(args):
+    # first, fetch the job to figure out what the next build number is
+    # this also lets us bail out if the job is invalid
+    job = args['<job>']
+    url = "%s/job/%s/api/json" % (URL, job)
+    resp = requests.get(url)
+    if not resp.ok:
+        print_response_err(resp)
+        return
+    doc = resp.json()
+    build = doc['nextBuildNumber']
+
+    # now lets start the build job
+    url = "%s/job/%s/build?delay=0sec" % (URL, job)
+    resp = requests.post(url)
+    if not resp.ok:
+        print "Error starting build:"
+        print_response_err(resp)
+        return
+
+    watch(URL, job, build)
+
 
 if __name__ == '__main__':
     try:
