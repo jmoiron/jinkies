@@ -49,9 +49,10 @@ spnre = re.compile(r'<span.*?>(?P<txt>.*?)</span>')
 bre = re.compile(r'<b>(?P<txt>.*?)</b>')
 
 colmap = {
+    '00CDCD': lambda s: color(s, color=blue, bold=True),
     'CDCD00': lambda s: color(s, color=yellow, bold=True),
     '00CD00': lambda s: color(s, color=green, bold=True),
-    '00CDCD': lambda s: color(s, color=blue, bold=True),
+    'CD0000': lambda s: color(s, color=red, underline=False),
     'link': lambda s: color(s, color=red, underline=True),
     'bold': lambda s: color(s, color=white, bold=True),
     '': lambda s: s,
