@@ -71,6 +71,8 @@ def colorize(text):
     s, _ = spnre.subn(rep(''), s)
     s, _ = are.subn(rep('link'), s)
     s, _ = bre.subn(rep('bold'), s)
+    s = s.replace('&gt;', '>')
+    s = s.replace('&lt;', '<')
     return s
 
 def main():
