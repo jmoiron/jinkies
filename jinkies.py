@@ -72,7 +72,7 @@ def colorize(text):
     s, _ = are.subn(rep('link'), s)
     s, _ = bre.subn(rep('bold'), s)
     s = s.replace('&gt;', '>')
-    s = s.replace('&lt;', '<')
+    s = s.replace('&lt;', '<').strip()
     return s
 
 def main():
