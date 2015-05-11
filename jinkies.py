@@ -72,7 +72,7 @@ def colorize(text):
     s, _ = are.subn(rep('link'), s)
     s, _ = bre.subn(rep('bold'), s)
     s = s.replace('&gt;', '>')
-    s = s.replace('&lt;', '<').strip()
+    s = s.replace('&lt;', '<').lstrip()
     return s
 
 def main():
@@ -209,7 +209,7 @@ def get_console(job, build):
     if not resp.ok:
         return []
     text = colorize(resp.text)
-    lines = text.split("\n")
+    lines = [l.lstrip() for l in text.split("\n")]
     return lines
 
 def cmd_build(args):
