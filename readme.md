@@ -1,9 +1,10 @@
 To install:
 
 ```bash
-$ git clone <jinkies clone url>
-$ cp <jinkies_repo>/jinkies.bash ~/.bash_completion.d/
-# add jinkies.py somewhere on your PATH, named "jinkies"
-$ cp <jinkies_repo>/jinkies.py ~/.local/bin/jinkies
-$ chmod a+x ~/.local/bin/jinkies
+$ git clone git@gist.github.com:67598a2bb740c029ba53.git jinkies
+$ cd jinkies && ./install.sh
 ```
+
+This copies `jinkies.py` over into `~/.local/bin`, does some checks to ensure
+you have its requirements installed (mostly python docopt), and also prints out
+configuration help.

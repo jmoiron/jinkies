@@ -169,7 +169,14 @@ def watch(URL, job, build):
     failures = 0
     waits = 0
     while 1:
-        resp = requests.get(url)
+        try:
+            resp = requests.get(url)
+        except requests.exceptions.ConnectionError:
+            if failures > 5:
+                print "Failure loading job for %s" % (job)
+                return
+            failures += 1
+            continue
         if not resp.ok and first:
             r2 = requests.get("%s/job/%s/api/json" % (URL, job))
             waits += 1
@@ -200,8 +207,10 @@ def watch(URL, job, build):
             first = False
         cons = console()
         if len(cons) > cp:
-            print "\n".join(cons[cp:]),
-            cp = len(cons)-1
+            toprint = filter(None, [c.strip("\r").strip("\n") for c in cons[cp:]])
+            if toprint:
+                print "\n".join(toprint)
+                cp = len(cons)-1
         if not doc['building']:
             print doc['result']
             return
