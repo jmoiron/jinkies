@@ -6,7 +6,8 @@
 Usage:
     jinkies list (jobs|views)
     jinkies show <view>
-    jinkies build <job>
+    jinkies build <job> [<args>...]
+    jinkies params <job>
     jinkies view <job>
     jinkies --config
 
@@ -92,6 +93,8 @@ def main():
         return cmd_show(args)
     elif args['build']:
         return cmd_build(args)
+    elif args['params']:
+        return cmd_params(args)
     elif args['view']:
         return cmd_view(args)
 
@@ -211,6 +214,23 @@ def get_console(job, build):
     text = colorize(resp.text)
     lines = [l.lstrip() for l in text.split("\n")]
     return lines
+
+def cmd_params(args):
+    job = args['<job>']
+    url = "%s/job/%s/api/json" % (URL, job)
+    resp = requests.get(url)
+    if not resp.ok:
+        print_response_err(resp)
+        return
+    doc = resp.json()
+    options = doc['actions'][0]['parameterDefinitions']
+    if len(options) == 0:
+        print "No params necessary."
+        return
+    for opt in options:
+        choices = opt['choices']
+        name = opt['name']
+        print "%s: %s" % (name, ', '.join(choices))
 
 def cmd_build(args):
     # first, fetch the job to figure out what the next build number is
