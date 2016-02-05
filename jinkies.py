@@ -38,11 +38,18 @@ And get a token by clicking "Show API Token", and then use a URL like:
 
 URL=""
 
+def damnit(string):
+    if isinstance(string, str):
+        string = string.decode("utf-8").encode("utf-8")
+    if isinstance(string, unicode):
+        string = string.encode("utf-8")
+    return string
+
 white,black,red,green,yellow,blue,purple = range(89,96)
 def color(string, color=green, bold=False, underline=False):
     """Usage: color("foo", red, bold=True)"""
     s = '01;' if bold else '04;' if underline else ''
-    return '\033[%s%sm' % (s, color) + str(string) + '\033[0m'
+    return '\033[%s%sm' % (s, color) + str(damnit(string)) + '\033[0m'
 
 # boo
 spre = re.compile(r'<span style="color: #(?P<color>[0-9A-F]{6});">(?P<txt>.*?)</span>')
@@ -55,6 +62,7 @@ colmap = {
     'CDCD00': lambda s: color(s, color=yellow, bold=True),
     '00CD00': lambda s: color(s, color=green, bold=True),
     'CD0000': lambda s: color(s, color=red, underline=False),
+    'E5E5E5': lambda s: color(s, color=white, bold=True),
     'link': lambda s: color(s, color=red, underline=True),
     'bold': lambda s: color(s, color=white, bold=True),
     '': lambda s: s,
@@ -74,7 +82,7 @@ def colorize(text):
             txt = d.get('txt', '')
             return colmap[color](txt)
         return inner
-    s = text
+    s = damnit(text)
     s, _ = spre.subn(rep(''), s)
     s, _ = spnre.subn(rep(''), s)
     s, _ = are.subn(rep('link'), s)
