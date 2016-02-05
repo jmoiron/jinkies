@@ -9,6 +9,7 @@ Usage:
     jinkies build <job> [<args>...]
     jinkies params <job>
     jinkies view <job>
+    jinkies status <job>
     jinkies --config
 
 Options:
@@ -59,6 +60,12 @@ colmap = {
     '': lambda s: s,
 }
 
+resmap = {
+    'SUCCESS': color('✓'),
+    'FAILURE': color('✗', color=red),
+    'default': color('?', color=yellow),
+}
+
 def colorize(text):
     def rep(default):
         def inner(group):
@@ -97,6 +104,8 @@ def main():
         return cmd_params(args)
     elif args['view']:
         return cmd_view(args)
+    elif args['status']:
+        return cmd_status(args)
 
 def print_job(job):
     print job['name']
@@ -129,14 +138,52 @@ def cmd_show(args):
     for job in doc['jobs']:
         print_job(job)
 
-def cmd_view(args):
+def cmd_status(args):
     job = args['<job>']
-    url = "%s/job/%s/api/json" % (URL, job)
+    url = "%s/job/%s/api/json?depth=1" % (URL, job)
     resp = requests.get(url)
     if not resp.ok:
         print_response_err(resp)
         return
     doc = resp.json()
+    # print the job and a short description (first line)
+    print "%s: %s" % (doc.get("displayName", job), doc.get("description", "").split("\n")[0])
+    # print the last 7 runs and their statuses
+    for d in doc.get("builds", [])[:7]:
+        ts = time.ctime(d["timestamp"]/1000).strip()
+        rs = d.get("result", "default")
+        if rs not in ('SUCCESS', 'FAILURE', 'default'):
+            print 'new result type: %s' % rs
+            rs = 'default'
+        result = resmap[rs]
+        minutes = d["duration"] / 1000 / 60
+        seconds = d["duration"] / 1000 % 60
+        print " %s #%d %s in %d:%d" % (result, d["number"], ts, minutes, seconds)
+
+
+def cmd_view(args):
+    job = args['<job>']
+    url = "%s/job/%s/api/json?depth=1" % (URL, job)
+    resp = requests.get(url)
+    if not resp.ok:
+        print_response_err(resp)
+        return
+    doc = resp.json()
+    # print the job and a short description (first line)
+    print "%s: %s" % (doc.get("displayName", job), doc.get("description", "").split("\n")[0])
+    # print the last 3 runs and their statuses
+    for d in doc.get("builds", [])[:3]:
+        ts = time.ctime(d["timestamp"]).strip()
+        rs = d.get("result", "default")
+        if rs not in ('SUCCESS', 'FAILURE', 'default'):
+            print 'new result type: %s' % rs
+            rs = 'default'
+        result = resmap[rs]
+        minutes = d["duration"] / 1000 / 60
+        seconds = d["duration"] / 1000 % 60
+        print " %s #%d %s in %d:%d" % (result, d["number"], ts, minutes, seconds)
+
+
     # if there is a queued job, lets wait for it to start
     if doc['inQueue']:
         next = doc['nextBuildNumber']
