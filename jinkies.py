@@ -181,7 +181,7 @@ def cmd_view(args):
     print "%s: %s" % (doc.get("displayName", job), doc.get("description", "").split("\n")[0])
     # print the last 3 runs and their statuses
     for d in doc.get("builds", [])[:3]:
-        ts = time.ctime(d["timestamp"]).strip()
+        ts = time.ctime(d["timestamp"]/1000).strip()
         rs = d.get("result", "default")
         if rs not in ('SUCCESS', 'FAILURE', 'default'):
             print 'new result type: %s' % rs
