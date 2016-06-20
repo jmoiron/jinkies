@@ -287,7 +287,7 @@ def cmd_params(args):
         print_response_err(resp)
         return
     doc = resp.json()
-    options = doc['actions'][0]['parameterDefinitions']
+    options = _param_defs_from_job(doc)
     if len(options) == 0:
         print "No params necessary."
         return
@@ -307,16 +307,33 @@ def cmd_build(args):
         return
     doc = resp.json()
     build = doc['nextBuildNumber']
+    job_param_defs = _param_defs_from_job(doc)
+    job_param_names = [p['name'] for p in job_param_defs]
 
     # now lets start the build job
-    url = "%s/job/%s/build?delay=0sec" % (URL, job)
-    resp = requests.post(url)
+    params = dict([p.split('=', 1) for p in args.get('<args>', [])])
+    for p in params:
+        if p not in job_param_names:
+            print "Param '%s' isn't an option for this job." % p
+            return
+    if params:
+        url = "%s/job/%s/buildWithParameters?delay=0sec" % (URL, job)
+    else:
+        url = "%s/job/%s/build?delay=0sec" % (URL, job)
+    resp = requests.post(url, data=params)
     if not resp.ok:
         print "Error starting build:"
         print_response_err(resp)
         return
 
     watch(URL, job, build)
+
+
+def _param_defs_from_job(job_json):
+    for action in job_json['actions']:
+        if 'parameterDefinitions' in action:
+            return action['parameterDefinitions']
+    return []
 
 
 if __name__ == '__main__':
