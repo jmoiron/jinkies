@@ -31,7 +31,7 @@ _jinkies_complete() {
             COMPREPLY=($(compgen -W "${_jinkies_complete_views}" -- $cur))
             return 0
             ;;
-        build|view)
+        build|view|params)
             COMPREPLY=($(compgen -W "${_jinkies_complete_jobs}" -- $cur))
             return 0
             ;;
