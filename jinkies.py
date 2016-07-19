@@ -292,7 +292,7 @@ def cmd_params(args):
         print "No params necessary."
         return
     for opt in options:
-        choices = opt['choices']
+        choices = opt.get('choices', [])
         name = opt['name']
         print "%s: %s" % (name, ', '.join(choices))
 
