@@ -1,7 +1,7 @@
 To install:
 
 ```bash
-$ git clone git@gist.github.com:67598a2bb740c029ba53.git jinkies
+$ git clone git@github.com/jmoiron/jinkies.git
 $ cd jinkies && ./install.sh
 ```
 
