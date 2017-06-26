@@ -18,7 +18,7 @@ echo $PATH | grep "$HOME/.local/bin" > /dev/null
 
 if [ $? != 0 ]; then
     echo "Installed jinkies into ~/.local/bin/ which is not in your PATH:"
-    echo "  export \$PATH=\$PATH:$HOME/.local/bin"
+    echo "  export \PATH=\$PATH:$HOME/.local/bin"
 else
     echo "Installed jinkies into ~/.local/bin/\n"
 fi
