@@ -34,6 +34,10 @@ If your jenkins is behind a login, you can first go to:
 
 And get a token by clicking "Show API Token", and then use a URL like:
     https://<yourname>:<yourtoken>@jenkins/
+
+If you use github auth for jenkins, you will need a personal access token
+with read:org permissions:
+    https://github.com/settings/tokens
 """
 
 URL=""
