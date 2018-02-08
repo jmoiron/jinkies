@@ -6,7 +6,7 @@
 Usage:
     jinkies list (jobs|views)
     jinkies show <view>
-    jinkies build <job> [<args>...]
+    jinkies build <job> [<args>...] [--no-log]
     jinkies params <job>
     jinkies view <job>
     jinkies status <job>
@@ -16,6 +16,7 @@ Options:
     -h --help       Show this help.
     --version       Show version and exit.
     --config        Show config and exit.
+    --no-log        Do not load the log output for build jobs.
 """
 
 import sys
@@ -330,7 +331,8 @@ def cmd_build(args):
         print_response_err(resp)
         return
 
-    watch(URL, job, build)
+    if not args.get('--no-log', False):
+        watch(URL, job, build)
 
 
 def _param_defs_from_job(job_json):
