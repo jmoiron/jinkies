@@ -96,14 +96,20 @@ def colorize(text):
     s = s.replace('&lt;', '<').lstrip()
     return s
 
+client = requests.session()
+
 def main():
     global URL
+
     args = docopt.docopt(__doc__, version="1.0")
     if os.getenv("JENKINS_URL"):
         URL = os.getenv("JENKINS_URL")
     if not URL:
         print url_help
         return
+
+    add_jenkins_csrf(client, URL)
+
     if args['--config']:
         print "URL: %s" % (URL)
         return
@@ -120,6 +126,14 @@ def main():
     elif args['status']:
         return cmd_status(args)
 
+def add_jenkins_csrf(client, url):
+    resp = requests.get('%s/crumbIssuer/api/xml?xpath=concat(//crumbRequestField,":",//crumb)' % url)
+    if not resp.ok:
+        print "warn: recieved %s fetching jenkins csrf crumb" % resp
+        return
+    key, crumb = resp.text.split(':')
+    client.headers.update({key: crumb})
+
 def print_job(job):
     print job['name']
 
@@ -129,7 +143,7 @@ def print_response_err(resp):
 
 def cmd_list(args):
     url = "%s/api/json" % URL
-    resp = requests.get(url)
+    resp = client.get(url)
     if not resp.ok:
         print_response_err(resp)
         return
@@ -143,7 +157,7 @@ def cmd_list(args):
 
 def cmd_show(args):
     url = "%s/view/%s/api/json" % (URL, args['<view>'])
-    resp = requests.get(url)
+    resp = client.get(url)
     if not resp.ok:
         print_response_err(resp)
         return
@@ -154,7 +168,7 @@ def cmd_show(args):
 def cmd_status(args):
     job = args['<job>']
     url = "%s/job/%s/api/json?depth=1" % (URL, job)
-    resp = requests.get(url)
+    resp = client.get(url)
     if not resp.ok:
         print_response_err(resp)
         return
@@ -177,7 +191,7 @@ def cmd_status(args):
 def cmd_view(args):
     job = args['<job>']
     url = "%s/job/%s/api/json?depth=1" % (URL, job)
-    resp = requests.get(url)
+    resp = client.get(url)
     if not resp.ok:
         print_response_err(resp)
         return
@@ -230,7 +244,7 @@ def watch(URL, job, build):
     waits = 0
     while 1:
         try:
-            resp = requests.get(url)
+            resp = client.get(url)
         except requests.exceptions.ConnectionError:
             if failures > 5:
                 print "Failure loading job for %s" % (job)
@@ -238,7 +252,7 @@ def watch(URL, job, build):
             failures += 1
             continue
         if not resp.ok and first:
-            r2 = requests.get("%s/job/%s/api/json" % (URL, job))
+            r2 = client.get("%s/job/%s/api/json" % (URL, job))
             waits += 1
             if not r2.ok:
                 print "Failure loading job for %s" % (job)
@@ -277,7 +291,7 @@ def watch(URL, job, build):
         time.sleep(1.5)
 
 def get_console(job, build):
-    resp = requests.get("%s/job/%s/%s/logText/progressiveHtml" % (URL, job, build))
+    resp = client.get("%s/job/%s/%s/logText/progressiveHtml" % (URL, job, build))
     if not resp.ok:
         return []
     text = colorize(resp.text)
@@ -287,7 +301,7 @@ def get_console(job, build):
 def cmd_params(args):
     job = args['<job>']
     url = "%s/job/%s/api/json" % (URL, job)
-    resp = requests.get(url)
+    resp = client.get(url)
     if not resp.ok:
         print_response_err(resp)
         return
@@ -306,7 +320,7 @@ def cmd_build(args):
     # this also lets us bail out if the job is invalid
     job = args['<job>']
     url = "%s/job/%s/api/json" % (URL, job)
-    resp = requests.get(url)
+    resp = client.get(url)
     if not resp.ok:
         print_response_err(resp)
         return
@@ -325,7 +339,7 @@ def cmd_build(args):
         url = "%s/job/%s/buildWithParameters?delay=0sec" % (URL, job)
     else:
         url = "%s/job/%s/build?delay=0sec" % (URL, job)
-    resp = requests.post(url, data=params)
+    resp = client.post(url, data=params)
     if not resp.ok:
         print "Error starting build:"
         print_response_err(resp)
