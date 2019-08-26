@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
 """Jinkies is a command line jenkins program.
@@ -22,7 +22,7 @@ Options:
 import sys
 import os
 import re
-import cookielib
+import http.cookiejar as cookielib
 import requests
 import docopt
 import time
@@ -43,18 +43,11 @@ with read:org permissions:
 
 URL=""
 
-def damnit(string):
-    if isinstance(string, str):
-        string = string.decode("utf-8").encode("utf-8")
-    if isinstance(string, unicode):
-        string = string.encode("utf-8")
-    return string
-
 white,black,red,green,yellow,blue,purple = range(89,96)
 def color(string, color=green, bold=False, underline=False):
     """Usage: color("foo", red, bold=True)"""
     s = '01;' if bold else '04;' if underline else ''
-    return '\033[%s%sm' % (s, color) + str(damnit(string)) + '\033[0m'
+    return '\033[%s%sm' % (s, color) + string + '\033[0m'
 
 # boo
 spre = re.compile(r'<span style="color: #(?P<color>[0-9A-F]{6});">(?P<txt>.*?)</span>')
@@ -79,7 +72,7 @@ resmap = {
     'default': color('?', color=yellow),
 }
 
-def colorize(text):
+def colorize(s):
     def rep(default):
         def inner(group):
             d = group.groupdict()
@@ -87,7 +80,6 @@ def colorize(text):
             txt = d.get('txt', '')
             return colmap[color](txt)
         return inner
-    s = damnit(text)
     s, _ = spre.subn(rep(''), s)
     s, _ = spnre.subn(rep(''), s)
     s, _ = are.subn(rep('link'), s)
@@ -105,13 +97,13 @@ def main():
     if os.getenv("JENKINS_URL"):
         URL = os.getenv("JENKINS_URL")
     if not URL:
-        print url_help
+        print(url_help)
         return
 
     add_jenkins_csrf(client, URL)
 
     if args['--config']:
-        print "URL: %s" % (URL)
+        print("URL: %s" % (URL))
         return
     if args['list']:
         return cmd_list(args)
@@ -129,17 +121,17 @@ def main():
 def add_jenkins_csrf(client, url):
     resp = requests.get('%s/crumbIssuer/api/xml?xpath=concat(//crumbRequestField,":",//crumb)' % url)
     if not resp.ok:
-        print "warn: recieved %s fetching jenkins csrf crumb" % resp
+        print("warn: recieved %s fetching jenkins csrf crumb" % resp)
         return
     key, crumb = resp.text.split(':')
     client.headers.update({key: crumb})
 
 def print_job(job):
-    print job['name']
+    print(job['name'])
 
 def print_response_err(resp):
-    print "Error: %s" % (resp)
-    print resp.text
+    print("Error: %s" % (resp))
+    print(resp.text)
 
 def cmd_list(args):
     url = "%s/api/json" % URL
@@ -153,7 +145,7 @@ def cmd_list(args):
             print_job(job)
     elif args['views']:
         for view in doc['views']:
-            print "%s: %s" % (view['name'], view['url'])
+            print("%s: %s" % (view['name'], view['url']))
 
 def cmd_show(args):
     url = "%s/view/%s/api/json" % (URL, args['<view>'])
@@ -174,18 +166,18 @@ def cmd_status(args):
         return
     doc = resp.json()
     # print the job and a short description (first line)
-    print "%s: %s" % (doc.get("displayName", job), doc.get("description", "").split("\n")[0])
+    print("%s: %s" % (doc.get("displayName", job), doc.get("description", "").split("\n")[0]))
     # print the last 7 runs and their statuses
     for d in doc.get("builds", [])[:7]:
-        ts = time.ctime(d["timestamp"]/1000).strip()
+        ts = time.ctime(d["timestamp"]//1000).strip()
         rs = d.get("result", "default")
         if rs not in ('SUCCESS', 'FAILURE', 'default'):
-            print 'new result type: %s' % rs
+            print('new result type: %s' % rs)
             rs = 'default'
         result = resmap[rs]
-        minutes = d["duration"] / 1000 / 60
-        seconds = d["duration"] / 1000 % 60
-        print " %s #%d %s in %d:%d" % (result, d["number"], ts, minutes, seconds)
+        minutes = d["duration"] // 1000 // 60
+        seconds = d["duration"] // 1000 % 60
+        print(" %s #%d %s in %d:%d" % (result, d["number"], ts, minutes, seconds))
 
 
 def cmd_view(args):
@@ -197,18 +189,18 @@ def cmd_view(args):
         return
     doc = resp.json()
     # print the job and a short description (first line)
-    print "%s: %s" % (doc.get("displayName", job), doc.get("description", "").split("\n")[0])
+    print("%s: %s" % (doc.get("displayName", job), doc.get("description", "").split("\n")[0]))
     # print the last 3 runs and their statuses
     for d in doc.get("builds", [])[:3]:
-        ts = time.ctime(d["timestamp"]/1000).strip()
+        ts = time.ctime(d["timestamp"]//1000).strip()
         rs = d.get("result", "default")
         if rs not in ('SUCCESS', 'FAILURE', 'default'):
-            print 'new result type: %s' % rs
+            print('new result type: %s' % rs)
             rs = 'default'
         result = resmap[rs]
-        minutes = d["duration"] / 1000 / 60
-        seconds = d["duration"] / 1000 % 60
-        print " %s #%d %s in %d:%d" % (result, d["number"], ts, minutes, seconds)
+        minutes = d["duration"] // 1000 // 60
+        seconds = d["duration"] // 1000 % 60
+        print(" %s #%d %s in %d:%d" % (result, d["number"], ts, minutes, seconds))
 
 
     # if there is a queued job, lets wait for it to start
@@ -221,11 +213,11 @@ def cmd_view(args):
     previousFinished = doc['lastCompletedBuild']
 
     if previous['number'] == previousFinished['number']:
-        print "Showing previous build %d" % previous['number']
-        print '\n'.join(get_console(job, previous['number']))
-        print ""
-        print "Showed previous build:"
-        print "%s/job/%s/%s" % (URL, job, previous['number'])
+        print("Showing previous build %d" % previous['number'])
+        print('\n'.join(get_console(job, previous['number'])))
+        print("")
+        print("Showed previous build:")
+        print("%s/job/%s/%s" % (URL, job, previous['number']))
         return
 
     watch(URL, job, previous['number'])
@@ -247,7 +239,7 @@ def watch(URL, job, build):
             resp = client.get(url)
         except requests.exceptions.ConnectionError:
             if failures > 5:
-                print "Failure loading job for %s" % (job)
+                print("Failure loading job for %s" % (job))
                 return
             failures += 1
             continue
@@ -255,8 +247,8 @@ def watch(URL, job, build):
             r2 = client.get("%s/job/%s/api/json" % (URL, job))
             waits += 1
             if not r2.ok:
-                print "Failure loading job for %s" % (job)
-                print r2.data
+                print("Failure loading job for %s" % (job))
+                print(r2.data)
                 return
             d = r2.json()
             if d['inQueue']:
@@ -270,23 +262,23 @@ def watch(URL, job, build):
             elif not resp.ok:
                 failures += 1
                 if failures > 5:
-                    print "Failure loading job for %s" % (job)
+                    print("Failure loading job for %s" % (job))
                     return
             continue
         if first and (failures or waits):
-            print ""
+            print("")
         doc = resp.json()
         if first:
-            print "Started build #%d, ETA %.1fs" % (build, doc['estimatedDuration']/1000.0)
+            print("Started build #%d, ETA %.1fs" % (build, doc['estimatedDuration']/1000.0))
             first = False
         cons = console()
         if len(cons) > cp:
             toprint = filter(None, [c.strip("\r").strip("\n") for c in cons[cp:]])
             if toprint:
-                print "\n".join(toprint)
+                print("\n".join(toprint))
                 cp = len(cons)-1
         if not doc['building']:
-            print doc['result']
+            print(doc['result'])
             return
         time.sleep(1.5)
 
@@ -308,12 +300,12 @@ def cmd_params(args):
     doc = resp.json()
     options = _param_defs_from_job(doc)
     if len(options) == 0:
-        print "No params necessary."
+        print("No params necessary.")
         return
     for opt in options:
         choices = opt.get('choices', [])
         name = opt['name']
-        print "%s: %s" % (name, ', '.join(choices))
+        print("%s: %s" % (name, ', '.join(choices)))
 
 def cmd_build(args):
     # first, fetch the job to figure out what the next build number is
@@ -333,7 +325,7 @@ def cmd_build(args):
     params = dict([p.split('=', 1) for p in args.get('<args>', [])])
     for p in params:
         if p not in job_param_names:
-            print "Param '%s' isn't an option for this job." % p
+            print("Param '%s' isn't an option for this job." % p)
             return
     if params:
         url = "%s/job/%s/buildWithParameters?delay=0sec" % (URL, job)
@@ -341,7 +333,7 @@ def cmd_build(args):
         url = "%s/job/%s/build?delay=0sec" % (URL, job)
     resp = client.post(url, data=params)
     if not resp.ok:
-        print "Error starting build:"
+        print("Error starting build:")
         print_response_err(resp)
         return
 
