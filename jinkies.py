@@ -10,6 +10,7 @@ Usage:
     jinkies params <job>
     jinkies view <job>
     jinkies status <job>
+    jinkies last_build <job>
     jinkies --config
 
 Options:
@@ -117,6 +118,8 @@ def main():
         return cmd_view(args)
     elif args['status']:
         return cmd_status(args)
+    elif args['last_build']:
+        return cmd_last_build(args)
 
 def add_jenkins_csrf(client, url):
     resp = requests.get('%s/crumbIssuer/api/xml?xpath=concat(//crumbRequestField,":",//crumb)' % url)
@@ -179,6 +182,19 @@ def cmd_status(args):
         seconds = d["duration"] // 1000 % 60
         print(" %s #%d %s in %d:%d" % (result, d["number"], ts, minutes, seconds))
 
+def cmd_last_build(args):
+    job = args['<job>']
+    url = "%s/job/%s/lastBuild/api/json" % (URL, job)
+    resp = client.get(url)
+    if not resp.ok:
+        print_response_err(resp)
+        return
+    doc = resp.json()
+    building = 'building' if doc.get('result') is None else 'done'
+    name = doc.get('displayName')
+    build_path = doc.get('url')
+    host_id = doc.get('builtOn')
+    print('%s is %s on %s. Check %s' % (name, building, host_id,  build_path))
 
 def cmd_view(args):
     job = args['<job>']
